@@ -3,7 +3,8 @@
 # Purpose: Script will pull the current Xenial Cloud image, make it public
 # Also enable Database service and pull the MySQL 5.7 image
 # only works on bright sites and default allocations with default credentials
-
+# dbs engine version list --inc -f json for list of engines
+# jq '.[] | select(.name == "5.7.00") | .id' for mysql 5.7
 
 display_usage() {
 	echo "This script will pull the xenial cloud image, make it public and enable MySQL 5.7 (along with enabling dbaas service)"
@@ -11,7 +12,7 @@ display_usage() {
 	}
 
 # if less than 1 arguments supplied, display usage
-if [  $# -le 1 ]
+if [  $# -lt 1 ]
 then
 	display_usage
 	exit 1
@@ -28,13 +29,13 @@ clusterip=$1
 
 echo Pulling Xenial image.
 
-imageid="$(symp -k --url $clusterip -d cloud_admin -u admin -p admin image create --is-public xenialimage -f value -c id)" 
+imageid="$(symp -k --url $clusterip -d cloud_admin -u admin -p admin image create --is-public XenialCloud -f value -c id)" 
 
 echo Image created with ID $imageid
 
 echo Uploading Xenial from Ubuntu repo to $imageid
 
-symp -k --url $clusterip -d cloud_admin -u admin -p admin image upload $imageid https://cloud-images.ubuntu.com/xenial/current/xenial-server-cloudimg-amd64-disk1.img --no-verify-ssl
+symp -k --url $clusterip -d cloud_admin -u admin -p admin image upload-from-url --no-verify-ssl $imageid https://cloud-images.ubuntu.com/xenial/current/xenial-server-cloudimg-amd64-disk1.img
 
 echo Done uploading xenial image.
 
@@ -46,6 +47,4 @@ symp -k --url $clusterip -d cloud_admin -u admin -p admin dbs engine version upd
 
 echo Done enabling MySQL 5.7 engine.
 
-# dbs engine version list --inc -f json
-# jq '.[] | select(.name == "5.7.00") | .id'
-# get uuid of 5.7 engine then enable it
+
