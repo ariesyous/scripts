@@ -38,5 +38,14 @@ symp -k --url $clusterip -d cloud_admin -u admin -p admin image upload $imageid 
 
 echo Done uploading xenial image.
 
+echo Fetching MySQL database engine.
+
+engineversion="$(symp -k --url $clusterip -d cloud_admin -u admin -p admin dbs engine version list --inc -f json | jq -r '.[] | select(.name == "5.7.00") | .id')"
+
+symp -k --url $clusterip -d cloud_admin -u admin -p admin dbs engine version update $engineversion --enable True
+
+echo Done enabling MySQL 5.7 engine.
+
 # dbs engine version list --inc -f json
+# jq '.[] | select(.name == "5.7.00") | .id'
 # get uuid of 5.7 engine then enable it
