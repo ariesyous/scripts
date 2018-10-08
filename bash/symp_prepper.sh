@@ -43,6 +43,10 @@ echo Fetching MySQL database engine.
 
 engineversion="$(symp -k --url $clusterip -d cloud_admin -u admin -p admin dbs engine version list --inc -f json | jq -r '.[] | select(.name == "5.7.00") | .id')"
 
+echo Engine version of MySQL 5.7 is $engineversion
+
+echo Enabling the MySQL 5.7 engine.
+
 symp -k --url $clusterip -d cloud_admin -u admin -p admin dbs engine version update $engineversion --enable True
 
 echo Done enabling MySQL 5.7 engine.
