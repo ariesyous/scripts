@@ -174,6 +174,7 @@ class awsec2inventory():
         region = "symphony"
         self.inventory = []
         self.subnetinventory = []
+        self.enisinventory = []
         self.secgrpinventory = []
         self.rtableinventory =[]
         self.vpcinventory = []
@@ -233,6 +234,16 @@ class awsec2inventory():
         output['VpcId'] = self.instancekey(subnet,'VpcId')
         self.subnetinventory.append(output)
 
+    def updateenijson(self, eni):
+        if self.vpcid and self.instancekey(eni,'VpcId') != self.vpcid:
+            return
+
+        output = {}
+        output['NetworkInterfaceId'] = self.instancekey(eni,'NetworkInterfaceId')
+        output['PrivateIpAddress'] = eni.get('PrivateIpAddresses', [{'PrivateIpAddress':''}])[0]['PrivateIpAddress']
+        output['VpcId'] = self.instancekey(eni,'VpcId')
+        self.enisinventory.append(output)
+
     def updatesecgrpjson(self, secgrp):
         if self.vpcid and self.instancekey(secgrp,'VpcId') != self.vpcid:
             return
@@ -288,6 +299,21 @@ class awsec2inventory():
             print("============================")
             print(i)
         return self.inventory
+
+    def getenisinfo(self):
+        enisinventory = self.client.describe_network_interfaces()
+        enis = enisinventory.get('NetworkInterfaces', [])
+        for eni in enis:
+            print(eni)
+            try:
+                self.updateenijson(eni)
+            except Exception as e:
+                print("Failed to update info " + str(e.args) + e.message)
+        self.enisinventory = json.loads(json.dumps(self.enisinventory, default=json_util.default))
+        for i in self.enisinventory:
+            print("============================")
+            print(i)
+        return self.enisinventory
 
     def getsubnetsinfo(self):
         subnetinventory=self.client.describe_subnets()
@@ -351,6 +377,11 @@ class awsec2inventory():
         response=self.client.terminate_instances(InstanceIds=[instanceId])
         return response
 
+    def deleteeni(self,networkInterfaceId):
+        response=self.client.delete_network_interface(NetworkInterfaceId=networkInterfaceId)
+
+        return response
+
     def deletesubnet(self,subnetId):
         response=self.client.delete_subnet(SubnetId=subnetId)
         return response
@@ -405,6 +436,7 @@ eradicate = os.getenv('ERADICATE', None)
 
 a = awsec2inventory(region,accesskey,secretkey,vpcid)
 instances=a.getinstanceinfo()
+enis=a.getenisinfo()
 subnets=a.getsubnetsinfo()
 secgrps=a.getsecuritygrpinfo()
 print("=========#############********&&&&&&&&&&&")
@@ -432,6 +464,12 @@ if eradicate:
             print(a.deleteinstance(instance['InstanceId']))
         except Exception as e:
             handlebotoerror(instance['InstanceId'], e)
+
+    for eni in enis:
+        try:
+            print(a.deleteeni(eni['NetworkInterfaceId']))
+        except Exception as e:
+            handlebotoerror(eni['VpcId'] + "-" + eni['NetworkInterfaceId'], e)
 
     for subnet in subnets:
         try:
